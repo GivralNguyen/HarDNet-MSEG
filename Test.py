@@ -1,3 +1,4 @@
+import sys
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -5,15 +6,15 @@ import os, argparse
 from scipy import misc
 from lib.HarDMSEG import HarDMSEG
 from utils.dataloader import test_dataset
-
+import imageio
 parser = argparse.ArgumentParser()
 parser.add_argument('--testsize', type=int, default=352, help='testing size')
-parser.add_argument('--pth_path', type=str, default='HarD-MSEG-best.pth')
+parser.add_argument('--pth_path', type=str, default='/media/quannm/New Volume/segment/HarDNet-MSEG/snapshots/HarD-MSEG-best/HarD-MSEG-best.pth')
 #for _data_name in ['CVC-ClinicDB']:
 for _data_name in ['CVC-300', 'CVC-ClinicDB', 'Kvasir', 'CVC-ColonDB', 'ETIS-LaribPolypDB']:
     
     ##### put ur data_path here #####
-    data_path = '/work/james128333/PraNet/TestDataset/{}/'.format(_data_name)
+    data_path = 'TestDataset/{}/'.format(_data_name)
     #####                       #####
     
     save_path = './results/HarDMSEG/{}/'.format(_data_name)
@@ -38,5 +39,5 @@ for _data_name in ['CVC-300', 'CVC-ClinicDB', 'Kvasir', 'CVC-ColonDB', 'ETIS-Lar
         res = F.upsample(res, size=gt.shape, mode='bilinear', align_corners=False)
         res = res.sigmoid().data.cpu().numpy().squeeze()
         res = (res - res.min()) / (res.max() - res.min() + 1e-8)
+        imageio.imwrite(save_path+name, res)
         
-        misc.imsave(save_path+name, res)

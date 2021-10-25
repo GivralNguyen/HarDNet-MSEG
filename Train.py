@@ -10,6 +10,7 @@ import torch.nn.functional as F
 import numpy as np
 from torchstat import stat
 
+best = 0
 
 def structure_loss(pred, mask):
     
@@ -72,6 +73,7 @@ def train(train_loader, model, optimizer, epoch, test_path):
     # ---- multi-scale training ----
     size_rates = [0.75, 1, 1.25]
     loss_record2, loss_record3, loss_record4, loss_record5 = AvgMeter(), AvgMeter(), AvgMeter(), AvgMeter()
+    
     for i, pack in enumerate(train_loader, start=1):
         for rate in size_rates:
             optimizer.zero_grad()
@@ -110,10 +112,11 @@ def train(train_loader, model, optimizer, epoch, test_path):
     save_path = 'snapshots/{}/'.format(opt.train_save)
     os.makedirs(save_path, exist_ok=True)
     
-    best = 0
+    global best
     if (epoch+1) % 1 == 0:
         meandice = test(model,test_path)
         if meandice > best:
+            print ("current best is "+str(best) +" new best is "+str(meandice))
             best = meandice
             torch.save(model.state_dict(), save_path + 'HarD-MSEG-best.pth' )
             print('[Saving Snapshot:]', save_path + 'HarD-MSEG-best.pth',meandice)
@@ -125,7 +128,7 @@ if __name__ == '__main__':
                         default=100, help='epoch number')
     
     parser.add_argument('--lr', type=float,
-                        default=1e-4, help='learning rate')
+                        default=5e-5, help='learning rate')
     
     parser.add_argument('--optimizer', type=str,
                         default='Adam', help='choosing optimizer Adam or SGD')
@@ -134,7 +137,7 @@ if __name__ == '__main__':
                         default=False, help='choose to do random flip rotation')
     
     parser.add_argument('--batchsize', type=int,
-                        default=16, help='training batch size')
+                        default=8, help='training batch size')
     
     parser.add_argument('--trainsize', type=int,
                         default=352, help='training dataset size')
@@ -149,10 +152,10 @@ if __name__ == '__main__':
                         default=50, help='every n epochs decay learning rate')
     
     parser.add_argument('--train_path', type=str,
-                        default='/work/james128333/PraNet/TrainDataset', help='path to train dataset')
+                        default='TrainDataset', help='path to train dataset')
     
     parser.add_argument('--test_path', type=str,
-                        default='/work/james128333/PraNet/TestDataset/Kvasir' , help='path to testing Kvasir dataset')
+                        default='TestDataset/Kvasir' , help='path to testing Kvasir dataset')
     
     parser.add_argument('--train_save', type=str,
                         default='HarD-MSEG-best')
@@ -176,14 +179,14 @@ if __name__ == '__main__':
         optimizer = torch.optim.SGD(params, opt.lr, weight_decay = 1e-4, momentum = 0.9)
         
     print(optimizer)
-    image_root = '{}/images/'.format(opt.train_path)
-    gt_root = '{}/masks/'.format(opt.train_path)
-
+    image_root = '{}/image/'.format(opt.train_path)
+    gt_root = '{}/mask/'.format(opt.train_path)
+    
     train_loader = get_loader(image_root, gt_root, batchsize=opt.batchsize, trainsize=opt.trainsize, augmentation = opt.augmentation)
     total_step = len(train_loader)
 
     print("#"*20, "Start Training", "#"*20)
-
+    
     for epoch in range(1, opt.epoch):
         adjust_lr(optimizer, opt.lr, epoch, 0.1, 200)
         train(train_loader, model, optimizer, epoch, opt.test_path)
